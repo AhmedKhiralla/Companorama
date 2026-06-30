@@ -9,31 +9,40 @@
     <style>
         body { background-color: #0e1117; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
         .metric-value { color: #00FFCC; font-size: 2.2rem; font-weight: bold; }
+        .env-value { color: #38bdf8; font-size: 2.2rem; font-weight: bold; } /* Cyan accent for environment data */
     </style>
 </head>
 <body class="text-gray-200 p-6">
 
     <div class="max-w-7xl mx-auto">
         <h1 class="text-3xl font-bold tracking-tight text-white">🏭 Companorama Wireless Telemetry Hub</h1>
-        <h5 class="text-sm text-gray-400 italic mt-1">Real-Time 0-10VDC Analog Process Input Interface Analytics</h5>
+        <h5 class="text-sm text-gray-400 italic mt-1">Real-Time 0-10VDC Analog Process Input Interface & Environmental Analytics</h5>
         <hr class="border-gray-800 my-4">
 
         <div id="connection-warning" class="hidden bg-yellow-900/30 border border-yellow-600 text-yellow-200 px-4 py-3 rounded mb-4">
             📡 Waiting for live data stream from ESP32... Ensure the transmission board is online.
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg shadow-md">
-                <p class="text-sm text-gray-400 font-medium tracking-wide uppercase">Calculated True Output (0-10Vdc)</p>
-                <p id="voltage-val" class="metric-value mt-2">0.00 Vdc</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md">
+                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Probe Output</p>
+                <p id="voltage-val" class="metric-value mt-1">0.00 Vdc</p>
             </div>
-            <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg shadow-md">
-                <p class="text-sm text-gray-400 font-medium tracking-wide uppercase">Physical Air Velocity Scale</p>
-                <p id="velocity-val" class="metric-value mt-2">0.000 m/s</p>
+            <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md">
+                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Air Velocity</p>
+                <p id="velocity-val" class="metric-value mt-1">0.000 m/s</p>
             </div>
-            <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg shadow-md">
-                <p class="text-sm text-gray-400 font-medium tracking-wide uppercase">Signal Channel State</p>
-                <p id="status-val" class="metric-value mt-2 text-gray-400">⚪ STANDBY</p>
+            <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md">
+                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Ambient Temperature</p>
+                <p id="temp-val" class="env-value mt-1">0.0 °C</p>
+            </div>
+            <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md">
+                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Relative Humidity</p>
+                <p id="hum-val" class="env-value mt-1">0.0 %</p>
+            </div>
+            <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md sm:col-span-2 lg:col-span-1">
+                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Channel State</p>
+                <p id="status-val" class="metric-value mt-1 text-gray-400">⚪ STANDBY</p>
             </div>
         </div>
 
@@ -60,7 +69,6 @@
     <script>
         const FIREBASE_LOGS_URL = "https://companorama-5da32-default-rtdb.europe-west1.firebasedatabase.app/analog_logs.json";
 
-        // Layout presets for Plotly charts
         const layoutGauge = {
             margin: { l: 25, r: 25, t: 30, b: 25 },
             paper_bgcolor: 'rgba(0,0,0,0)',
@@ -88,16 +96,18 @@
                 }
                 document.getElementById('connection-warning').classList.add('hidden');
 
-                // Extract keys chronologically (Firebase keys naturally sort by generation timestamp)
                 const sortedKeys = Object.keys(data).sort();
                 const recordCollection = sortedKeys.map(key => data[key]);
-                
-                // Get absolute latest array node
                 const latestNode = recordCollection[recordCollection.length - 1];
 
                 // Update text elements inside dashboard cards
                 document.getElementById('voltage-val').innerText = latestNode.sensor_voltage.toFixed(2) + " Vdc";
                 document.getElementById('velocity-val').innerText = latestNode.air_velocity.toFixed(3) + " m/s";
+                
+                // 🌟 Update New Environmental Data Blocks cleanly
+                document.getElementById('temp-val').innerText = (latestNode.temperature !== undefined ? latestNode.temperature.toFixed(1) : "0.0") + " °C";
+                document.getElementById('hum-val').innerText = (latestNode.humidity !== undefined ? latestNode.humidity.toFixed(1) : "0.0") + " %";
+                
                 document.getElementById('timestamp-val').innerText = latestNode.timestamp;
                 
                 if(latestNode.sensor_voltage > 0.15) {
@@ -108,7 +118,6 @@
                     document.getElementById('status-val').style.color = "#AAAAAA";
                 }
 
-                // Slice historical array tracking for up to 30 data logs
                 const historySlice = recordCollection.slice(-30);
                 const timestamps = historySlice.map(r => {
                     let d = new Date(r.timestamp);
@@ -116,7 +125,7 @@
                 });
                 const velocities = historySlice.map(r => r.air_velocity);
 
-                // Render dynamic Gauge Level (Displays current Vdc voltage generated by transmitter)
+                // Render dynamic Gauge Level
                 const gaugeData = [{
                     type: "indicator",
                     mode: "gauge+number",
@@ -153,7 +162,6 @@
             }
         }
 
-        // Initialize execution loops every 1 second (1000ms)
         setInterval(fetchPipelineUpdate, 1000);
         fetchPipelineUpdate();
     </script>
