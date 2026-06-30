@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Companorama | Analog Wireless Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        body { background-color: #0e1117; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .metric-value { color: #00FFCC; font-size: 2.2rem; font-weight: bold; }
+    </style>
+</head>
+<body class="text-gray-200 p-6">
+
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-3xl font-bold tracking-tight text-white">🏭 Companorama Wireless Telemetry Hub</h1>
+        <h5 class="text-sm text-gray-400 italic mt-1">Real-Time 0-10VDC Analog Process Input Interface Analytics</h5>
+        <hr class="border-gray-800 my-4">
+
+        <div id="connection-warning" class="hidden bg-yellow-900/30 border border-yellow-600 text-yellow-200 px-4 py-3 rounded mb-4">
+            📡 Waiting for live data stream from ESP32... Ensure the transmission board is online.
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg shadow-md">
+                <p class="text-sm text-gray-400 font-medium tracking-wide uppercase">Calculated True Output (0-10Vdc)</p>
+                <p id="voltage-val" class="metric-value mt-2">0.00 Vdc</p>
+            </div>
+            <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg shadow-md">
+                <p class="text-sm text-gray-400 font-medium tracking-wide uppercase">Physical Air Velocity Scale</p>
+                <p id="velocity-val" class="metric-value mt-2">0.000 m/s</p>
+            </div>
+            <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg shadow-md">
+                <p class="text-sm text-gray-400 font-medium tracking-wide uppercase">Signal Channel State</p>
+                <p id="status-val" class="metric-value mt-2 text-gray-400">⚪ STANDBY</p>
+            </div>
+        </div>
+
+        <hr class="border-gray-800 my-4">
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold mb-2 text-white">🎯 Scaled Transmitter Level</h3>
+                <div id="gauge-chart" class="w-full h-64"></div>
+            </div>
+            <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg lg:col-span-2 shadow-md">
+                <h3 class="text-lg font-semibold mb-2 text-white">📈 Velocity Waveform Telemetry History (Live 1Hz)</h3>
+                <div id="trend-chart" class="w-full h-64"></div>
+            </div>
+        </div>
+
+        <hr class="border-gray-800 my-6">
+        <div class="flex flex-col sm:flex-row justify-between items-center text-xs text-gray-500">
+            <p>Last updated transmission checkpoint: <span id="timestamp-val" class="text-gray-400">None</span></p>
+            <p class="mt-2 sm:mt-0 bg-gray-800 text-gray-400 px-3 py-1 rounded">🔄 Real-time Pipeline Active (1s Local Pull)</p>
+        </div>
+    </div>
+
+    <script>
+        const FIREBASE_LOGS_URL = "https://companorama-5da32-default-rtdb.europe-west1.firebasedatabase.app/analog_logs.json";
+
+        // Layout presets for Plotly charts
+        const layoutGauge = {
+            margin: { l: 25, r: 25, t: 30, b: 25 },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: "white" }
+        };
+
+        const layoutTrend = {
+            margin: { l: 40, r: 15, t: 10, b: 40 },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            xaxis: { title: "Timeline Stream", gridcolor: "#2a2d35", font: { color: "#666" } },
+            yaxis: { title: "Velocity (m/s)", gridcolor: "#2a2d35", range: [-0.05, 1.1] },
+            font: { color: "white" }
+        };
+
+        async function fetchPipelineUpdate() {
+            try {
+                const response = await fetch(FIREBASE_LOGS_URL);
+                const data = await response.json();
+                
+                if (!data || Object.keys(data).length === 0) {
+                    document.getElementById('connection-warning').classList.remove('hidden');
+                    return;
+                }
+                document.getElementById('connection-warning').classList.add('hidden');
+
+                // Extract keys chronologically (Firebase keys naturally sort by generation timestamp)
+                const sortedKeys = Object.keys(data).sort();
+                const recordCollection = sortedKeys.map(key => data[key]);
+                
+                // Get absolute latest array node
+                const latestNode = recordCollection[recordCollection.length - 1];
+
+                // Update text elements inside dashboard cards
+                document.getElementById('voltage-val').innerText = latestNode.sensor_voltage.toFixed(2) + " Vdc";
+                document.getElementById('velocity-val').innerText = latestNode.air_velocity.toFixed(3) + " m/s";
+                document.getElementById('timestamp-val').innerText = latestNode.timestamp;
+                
+                if(latestNode.sensor_voltage > 0.15) {
+                    document.getElementById('status-val').innerText = "🟢 ACTIVE";
+                    document.getElementById('status-val').style.color = "#00FFCC";
+                } else {
+                    document.getElementById('status-val').innerText = "⚪ STANDBY (0V)";
+                    document.getElementById('status-val').style.color = "#AAAAAA";
+                }
+
+                // Slice historical array tracking for up to 30 data logs
+                const historySlice = recordCollection.slice(-30);
+                const timestamps = historySlice.map(r => {
+                    let d = new Date(r.timestamp);
+                    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                });
+                const velocities = historySlice.map(r => r.air_velocity);
+
+                // Render dynamic Gauge Level (Displays current Vdc voltage generated by transmitter)
+                const gaugeData = [{
+                    type: "indicator",
+                    mode: "gauge+number",
+                    value: latestNode.sensor_voltage,
+                    number: { suffix: " V", font: { size: 26 } },
+                    gauge: {
+                        axis: { range: [0, 10.0], tickwidth: 1, tickcolor: "white", dtick: 2 },
+                        bar: { color: "#00FFCC" },
+                        bgcolor: "rgba(0,0,0,0)",
+                        borderwidth: 1,
+                        bordercolor: "gray",
+                        steps: [
+                            { range: [0.0, 1.5], color: 'rgba(255, 0, 0, 0.1)' },
+                            { range: [1.5, 8.5], color: 'rgba(0, 255, 0, 0.05)' },
+                            { range: [8.5, 10.0], color: 'rgba(255, 0, 0, 0.2)' }
+                        ],
+                    }
+                }];
+                Plotly.react('gauge-chart', gaugeData, layoutGauge);
+
+                // Render dynamic Trend Line tracking physical speed (m/s)
+                const trendData = [{
+                    x: timestamps,
+                    y: velocities,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    marker: { color: '#00FFCC', size: 6 },
+                    line: { color: '#00FFCC', width: 2 }
+                }];
+                Plotly.react('trend-chart', trendData, layoutTrend);
+
+            } catch (error) {
+                console.error("Critical stream mapping error: ", error);
+            }
+        }
+
+        // Initialize execution loops every 1 second (1000ms)
+        setInterval(fetchPipelineUpdate, 1000);
+        fetchPipelineUpdate();
+    </script>
+</body>
+</html>
