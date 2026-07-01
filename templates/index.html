@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Companorama | Valve Actuator Monitor</title>
+    <title>Companorama | Process Climate Monitor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
     <style>
         body { background-color: #0e1117; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-        .metric-orange { color: #ff9f43; }
+        .metric-purple { color: #a55eea; }
     </style>
 </head>
 <body class="text-gray-200 p-6">
@@ -16,8 +16,8 @@
     <div class="max-w-7xl mx-auto">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
             <div>
-                <h1 class="text-3xl font-bold tracking-tight text-white">🏭 Companorama Valve Diagnostics</h1>
-                <h5 class="text-sm text-gray-400 italic mt-1">Real-Time Terminal U Voltage Position Feedback Loop Monitoring Panel</h5>
+                <h1 class="text-3xl font-bold tracking-tight text-white">🏭 Companorama Climate Matrix</h1>
+                <h5 class="text-sm text-gray-400 italic mt-1">Siemens QFM3160 Duct Sensor Telemetry Node Panel (0-50°C Range)</h5>
             </div>
             <div id="comms-badge" class="mt-2 md:mt-0 bg-red-900/40 border border-red-700 text-red-200 px-3 py-1 rounded text-xs uppercase tracking-wider font-semibold animate-pulse">
                 🔴 offline
@@ -27,54 +27,54 @@
         <hr class="border-gray-800 mb-6">
 
         <div id="connection-warning" class="hidden bg-yellow-900/30 border border-yellow-600 text-yellow-200 px-4 py-3 rounded mb-6">
-            📡 Awaiting streaming data signals from ESP32 Pin 34... Check database link parameters.
+            📡 Awaiting active data stream transmission matrix from ESP32 Pin 34... Verifying database connectivity link.
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md">
-                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Valve Stroke Position</p>
-                <p id="actuator-pct" class="metric-orange text-3xl font-bold mt-1">0.0%</p>
+                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Duct Temperature</p>
+                <p id="temp-val" class="metric-purple text-3xl font-bold mt-1">0.0 °C</p>
             </div>
             
             <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md">
-                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Terminal U Voltage</p>
-                <p id="actuator-volt" class="metric-orange text-3xl font-bold mt-1">0.00 Vdc</p>
+                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Terminal X2 Voltage</p>
+                <p id="sensor-volt" class="metric-purple text-3xl font-bold mt-1">0.00 Vdc</p>
             </div>
 
             <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md">
-                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Linear Shaft Travel</p>
-                <p id="actuator-mm" class="metric-orange text-3xl font-bold mt-1">0.00 mm</p>
+                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Hardware Calibration</p>
+                <p class="text-sm font-semibold text-gray-300 mt-3 font-mono">Position R2 [0-50°C]</p>
             </div>
 
             <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md">
-                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Operational State</p>
-                <p id="valve-state-text" class="text-sm font-semibold tracking-wide mt-3 text-gray-500">Checking Input...</p>
+                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Process Health State</p>
+                <p id="process-state-text" class="text-sm font-semibold tracking-wide mt-3 text-gray-500">Evaluating Array...</p>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg shadow-md flex flex-col justify-between">
                 <div>
-                    <h3 class="text-base font-semibold mb-1 text-white">Linear Stem Extension</h3>
-                    <p class="text-xs text-gray-400 mb-4">Geometric model scale representation tracking 20mm shaft stroke</p>
+                    <h3 class="text-base font-semibold mb-1 text-white">Duct Core Column</h3>
+                    <p class="text-xs text-gray-400 mb-4">Geometric model scale tracking physical temperature parameters</p>
                 </div>
                 
                 <div class="bg-[#0e1117] border border-gray-800 rounded-xl p-6 flex flex-col items-center justify-center relative h-60">
                     <div class="w-12 h-44 bg-gray-900 border border-gray-700 rounded-md overflow-hidden relative shadow-inner">
-                        <div id="valve-shaft-fill" class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-orange-600 to-amber-400 transition-all duration-300 shadow-lg" style="height: 0%;"></div>
-                        <div class="absolute top-0 right-1 text-[9px] text-gray-500 font-mono">20mm</div>
-                        <div class="absolute top-1/2 -translate-y-1/2 right-1 text-[9px] text-gray-500 font-mono">10mm</div>
-                        <div class="absolute bottom-0 right-1 text-[9px] text-gray-500 font-mono">0mm</div>
+                        <div id="thermometer-fill" class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-purple-700 to-indigo-400 transition-all duration-300 shadow-lg" style="height: 0%;"></div>
+                        <div class="absolute top-0 right-1 text-[9px] text-gray-500 font-mono">50°C</div>
+                        <div class="absolute top-1/2 -translate-y-1/2 right-1 text-[9px] text-gray-500 font-mono">25°C</div>
+                        <div class="absolute bottom-0 right-1 text-[9px] text-gray-500 font-mono">0°C</div>
                     </div>
                     <div class="mt-4 text-center">
-                        <span id="valve-badge" class="px-2.5 py-0.5 rounded text-[11px] font-bold uppercase bg-gray-800 text-gray-400">STANDBY</span>
+                        <span id="process-badge" class="px-2.5 py-0.5 rounded text-[11px] font-bold uppercase bg-gray-800 text-gray-400">STANDBY</span>
                     </div>
                 </div>
             </div>
 
             <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg lg:col-span-3 shadow-md">
-                <h3 class="text-base font-semibold mb-1 text-white">📈 Valve Stroke Telemetry Waveform History</h3>
-                <p class="text-xs text-gray-400 mb-2">Live 1Hz timeline stream tracking active modulating behavior patterns</p>
+                <h3 class="text-base font-semibold mb-1 text-white">📈 High-Fidelity Continuous Waveform History</h3>
+                <p class="text-xs text-gray-400 mb-2">Live 1Hz timeline stream mapping thermal environment updates</p>
                 <div id="scada-trend-chart" class="w-full h-64"></div>
             </div>
         </div>
@@ -82,7 +82,7 @@
         <hr class="border-gray-800 my-6">
         <div class="flex flex-col sm:flex-row justify-between items-center text-xs text-gray-500">
             <p>Last transmission snapshot checkpoint: <span id="timestamp-val" class="text-gray-300 font-mono">None</span></p>
-            <p class="mt-2 sm:mt-0 bg-gray-800 border border-gray-700 text-gray-400 px-3 py-1 rounded tracking-wide">🔄 Pipeline Processing Interface Active</p>
+            <p class="mt-2 sm:mt-0 bg-gray-800 border border-gray-700 text-gray-400 px-3 py-1 rounded tracking-wide">🔄 Pipeline Processing Engine Active</p>
         </div>
     </div>
 
@@ -96,7 +96,7 @@
             showlegend: false,
             font: { color: "#fff" },
             xaxis: { title: "Timeline Coordinate", gridcolor: "#232733", font: { color: "#718096" }, tickfont: { size: 10 } },
-            yaxis: { title: "Valve Stroke (%)", gridcolor: "#232733", titlefont: { color: "#ff9f43" }, tickfont: { color: "#ff9f43" }, range: [-5, 105] }
+            yaxis: { title: "Temperature (°C)", gridcolor: "#232733", titlefont: { color: "#a55eea" }, tickfont: { color: "#a55eea" }, range: [-2, 55] }
         };
 
         async function pullRealtimeArrayUpdates() {
@@ -118,59 +118,59 @@
                 commsBadge.innerText = "🟢 online";
                 commsBadge.className = "mt-2 md:mt-0 bg-emerald-950/50 border border-emerald-500 text-emerald-300 px-3 py-1 rounded text-xs uppercase tracking-wider font-semibold";
 
-                // Map UI Nodes cleanly
-                const parsedActuatorVolt = absoluteLatestNode.actuator_voltage !== undefined ? absoluteLatestNode.actuator_voltage : 0.0;
-                const parsedStrokePct = absoluteLatestNode.stroke_percentage !== undefined ? absoluteLatestNode.stroke_percentage : 0.0;
-                const parsedStrokeMm = absoluteLatestNode.stroke_mm !== undefined ? absoluteLatestNode.stroke_mm : 0.0;
+                // Unpack UI structural vectors
+                const parsedTemp = absoluteLatestNode.temperature !== undefined ? absoluteLatestNode.temperature : 0.0;
+                const parsedVolt = absoluteLatestNode.sensor_voltage !== undefined ? absoluteLatestNode.sensor_voltage : 0.0;
 
-                document.getElementById('actuator-volt').innerText = parsedActuatorVolt.toFixed(2) + " Vdc";
-                document.getElementById('actuator-pct').innerText = parsedStrokePct.toFixed(1) + "%";
-                document.getElementById('actuator-mm').innerText = parsedStrokeMm.toFixed(2) + " mm";
+                document.getElementById('temp-val').innerText = parsedTemp.toFixed(2) + " °C";
+                document.getElementById('sensor-volt').innerText = parsedVolt.toFixed(2) + " Vdc";
                 document.getElementById('timestamp-val').innerText = absoluteLatestNode.timestamp;
 
-                document.getElementById('valve-shaft-fill').style.height = parsedStrokePct + "%";
+                // Scale fill mapping height logic percentage bounds (0-50°C scale range)
+                const visiblePercentageHeight = (parsedTemp / 50.0) * 100;
+                document.getElementById('thermometer-fill').style.height = visiblePercentageHeight + "%";
 
-                const stateText = document.getElementById('valve-state-text');
-                const badgeElement = document.getElementById('valve-badge');
+                const stateText = document.getElementById('process-state-text');
+                const badgeElement = document.getElementById('process-badge');
                 
-                if (parsedStrokePct === 0) {
-                    stateText.innerText = "⛔ Fully Static Closed";
-                    stateText.className = "text-sm font-semibold tracking-wide mt-3 text-red-400";
-                    badgeElement.innerText = "CLOSED";
-                    badgeElement.className = "px-2.5 py-0.5 rounded text-[11px] font-bold uppercase bg-red-950 text-red-300 border border-red-800";
-                } else if (parsedStrokePct >= 99.0) {
-                    stateText.innerText = "⚡ Full System Capacity Open";
+                if (parsedTemp <= 18.0) {
+                    stateText.innerText = "❄️ Sub-Nominal Low Threshold";
+                    stateText.className = "text-sm font-semibold tracking-wide mt-3 text-cyan-400";
+                    badgeElement.innerText = "COOL";
+                    badgeElement.className = "px-2.5 py-0.5 rounded text-[11px] font-bold uppercase bg-cyan-950 text-cyan-300 border border-cyan-800";
+                } else if (parsedTemp > 18.0 && parsedTemp <= 28.0) {
+                    stateText.innerText = "🟢 Standard Ambient Safe Run";
                     stateText.className = "text-sm font-semibold tracking-wide mt-3 text-emerald-400";
-                    badgeElement.innerText = "FULL OPEN";
+                    badgeElement.innerText = "NORMAL";
                     badgeElement.className = "px-2.5 py-0.5 rounded text-[11px] font-bold uppercase bg-emerald-950 text-emerald-300 border border-emerald-800";
                 } else {
-                    stateText.innerText = "🔄 Dynamic Modulating Flow";
-                    stateText.className = "text-sm font-semibold tracking-wide mt-3 text-amber-400";
-                    badgeElement.innerText = "MODULATING";
-                    badgeElement.className = "px-2.5 py-0.5 rounded text-[11px] font-bold uppercase bg-amber-950 text-amber-300 border border-amber-800";
+                    stateText.innerText = "🔥 Thermal Overload Boundary Warning";
+                    stateText.className = "text-sm font-semibold tracking-wide mt-3 text-red-400";
+                    badgeElement.innerText = "HIGH TEMP";
+                    badgeElement.className = "px-2.5 py-0.5 rounded text-[11px] font-bold uppercase bg-red-950 text-red-300 border border-red-800";
                 }
 
-                // Slicing chronological timeline dataset array vectors (Last 30 indices)
+                // Slice rolling historical dataset timeline (Last 30 data logs)
                 const rollingHistorySlice = totalRecordsCollected.slice(-30);
                 const timelineTimestamps = rollingHistorySlice.map(record => {
                     let dateObject = new Date(record.timestamp);
                     return dateObject.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 });
-                const historyValveStrokeArray = rollingHistorySlice.map(record => record.stroke_percentage !== undefined ? record.stroke_percentage : 0.0);
+                const historyTemperatureArray = rollingHistorySlice.map(record => record.temperature !== undefined ? record.temperature : 0.0);
 
-                const valveStrokeTrace = {
+                const temperatureTrace = {
                     x: timelineTimestamps,
-                    y: historyValveStrokeArray,
+                    y: historyTemperatureArray,
                     type: 'scatter',
                     mode: 'lines+markers',
-                    marker: { color: '#ff9f43', size: 4 },
-                    line: { color: '#ff9f43', width: 2, shape: 'spline' }
+                    marker: { color: '#a55eea', size: 4 },
+                    line: { color: '#a55eea', width: 2, shape: 'spline' }
                 };
 
-                Plotly.react('scada-trend-chart', [valveStrokeTrace], chartLayoutBlueprint);
+                Plotly.react('scada-trend-chart', [temperatureTrace], chartLayoutBlueprint);
 
             } catch (error) {
-                console.error("SCADA Node processing crash event notice: ", error);
+                console.error("SCADA Node rendering crash notification: ", error);
                 document.getElementById('comms-badge').innerText = "⚠️ comms lag";
                 document.getElementById('comms-badge').className = "mt-2 md:mt-0 bg-yellow-950/50 border border-yellow-600 text-yellow-300 px-3 py-1 rounded text-xs uppercase tracking-wider font-semibold";
             }
