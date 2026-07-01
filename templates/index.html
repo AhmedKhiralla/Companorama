@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Companorama | Process & Environmental Monitor</title>
+    <title>Companorama | Actuator Diagnostics Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
     <style>
         body { background-color: #0e1117; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-        .metric-blue { color: #00FFCC; }
         .metric-orange { color: #ff9f43; }
-        .metric-purple { color: #a55eea; }
     </style>
 </head>
 <body class="text-gray-200 p-6">
@@ -19,7 +17,7 @@
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
             <div>
                 <h1 class="text-3xl font-bold tracking-tight text-white">🏭 Companorama Telemetry Hub</h1>
-                <h5 class="text-sm text-gray-400 italic mt-1">Multi-Channel SCADA Matrix: Air Velocity, Climate, & Valve Stroke Diagnostics</h5>
+                <h5 class="text-sm text-gray-400 italic mt-1">Actuator Positioning System Matrix: Terminal U Real-Time Validation</h5>
             </div>
             <div id="comms-badge" class="mt-2 md:mt-0 bg-red-900/40 border border-red-700 text-red-200 px-3 py-1 rounded text-xs uppercase tracking-wider font-semibold animate-pulse">
                 🔴 offline
@@ -29,38 +27,26 @@
         <hr class="border-gray-800 mb-6">
 
         <div id="connection-warning" class="hidden bg-yellow-900/30 border border-yellow-600 text-yellow-200 px-4 py-3 rounded mb-6">
-            📡 Live data stream interrupted or array empty. Verifying Firebase runtime availability...
+            📡 Live data stream interrupted. Verifying Firebase RTDB integration runtime...
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-            <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md">
-                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Air Flow Probe</p>
-                <p id="velocity-val" class="metric-blue text-2xl font-bold mt-1">0.000 m/s</p>
-                <p id="voltage-val" class="text-xs text-gray-500 mt-0.5">0.00 Vdc Input</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg shadow-md">
+                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Terminal U Output</p>
+                <p id="actuator-volt" class="metric-orange text-3xl font-bold mt-1">0.00 Vdc</p>
+                <p class="text-xs text-gray-500 mt-1">Direct Hardware Return Loop</p>
             </div>
             
-            <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md">
-                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Actuator Stroke</p>
-                <p id="actuator-pct" class="metric-orange text-2xl font-bold mt-1">0.0%</p>
-                <p id="actuator-mm" class="text-xs text-orange-500/70 mt-0.5">0.00 mm Displacement</p>
+            <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg shadow-md">
+                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Valve Shaft Position</p>
+                <p id="actuator-pct" class="metric-orange text-3xl font-bold mt-1">0.0%</p>
+                <p id="actuator-mm" class="text-xs text-gray-400/80 mt-1">0.00 mm Linear Displacement</p>
             </div>
 
-            <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md">
-                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Terminal U Output</p>
-                <p id="actuator-volt" class="metric-orange text-2xl font-bold mt-1">0.00 Vdc</p>
-                <p id="valve-state-text" class="text-xs text-gray-500 mt-0.5">Determining State...</p>
-            </div>
-
-            <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md">
-                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Ambient Temp</p>
-                <p id="temp-val" class="metric-purple text-2xl font-bold mt-1">0.0 °C</p>
-                <p class="text-xs text-gray-500 mt-0.5">DHT11 Array Node</p>
-            </div>
-
-            <div class="bg-[#1a1c23] border border-gray-800 p-4 rounded-lg shadow-md">
-                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Relative Humidity</p>
-                <p id="hum-val" class="metric-purple text-2xl font-bold mt-1">0.0 %</p>
-                <p class="text-xs text-gray-500 mt-0.5">Non-Condensing Range</p>
+            <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg shadow-md">
+                <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Operational Mode</p>
+                <p id="valve-state-text" class="text-gray-400 text-2xl font-bold mt-1.5">Awaiting Sync...</p>
+                <p class="text-xs text-gray-500 mt-1">Logic Threshold Evaluation</p>
             </div>
         </div>
 
@@ -74,7 +60,6 @@
                 <div class="bg-[#0e1117] border border-gray-800 rounded-xl p-6 flex flex-col items-center justify-center relative h-60">
                     <div class="w-12 h-44 bg-gray-900 border border-gray-700 rounded-md overflow-hidden relative shadow-inner">
                         <div id="valve-shaft-fill" class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-orange-600 to-amber-400 transition-all duration-300 shadow-lg" style="height: 0%;"></div>
-                        
                         <div class="absolute top-0 right-1 text-[9px] text-gray-500 font-mono">20mm</div>
                         <div class="absolute top-1/2 -translate-y-1/2 right-1 text-[9px] text-gray-500 font-mono">10mm</div>
                         <div class="absolute bottom-0 right-1 text-[9px] text-gray-500 font-mono">0mm</div>
@@ -86,8 +71,8 @@
             </div>
 
             <div class="bg-[#1a1c23] border border-gray-800 p-5 rounded-lg lg:col-span-3 shadow-md">
-                <h3 class="text-base font-semibold mb-1 text-white">📈 Dynamic Telemetry Waveform History (1Hz Real-Time)</h3>
-                <p class="text-xs text-gray-400 mb-2">Dual-axis analytics tracking Air Velocity response mapping versus Valve positioning actions</p>
+                <h3 class="text-base font-semibold mb-1 text-white">📈 Actuator Performance Waveform History (1Hz Real-Time)</h3>
+                <p class="text-xs text-gray-400 mb-2">Simultaneous tracking mapping loop feedback voltage relative to linear stroke percentage</p>
                 <div id="scada-trend-chart" class="w-full h-64"></div>
             </div>
         </div>
@@ -95,14 +80,13 @@
         <hr class="border-gray-800 my-6">
         <div class="flex flex-col sm:flex-row justify-between items-center text-xs text-gray-500">
             <p>Last verified physical transmission node checkpoint: <span id="timestamp-val" class="text-gray-300 font-mono">None</span></p>
-            <p class="mt-2 sm:mt-0 bg-gray-800 border border-gray-700 text-gray-400 px-3 py-1 rounded tracking-wide">🔄 Live Firebase Pipeline Socket Connected</p>
+            <p class="mt-2 sm:mt-0 bg-gray-800 border border-gray-700 text-gray-400 px-3 py-1 rounded tracking-wide">🔄 Isolated Valve Feedback Pipeline Active</p>
         </div>
     </div>
 
     <script>
         const DATABASE_STREAM_URL = "https://companorama-5da32-default-rtdb.europe-west1.firebasedatabase.app/analog_logs.json";
 
-        // Plotly Engineering Layout Architecture Blueprint Configuration
         const chartLayoutBlueprint = {
             margin: { l: 50, r: 50, t: 15, b: 40 },
             paper_bgcolor: 'rgba(0,0,0,0)',
@@ -111,8 +95,8 @@
             legend: { orientation: "h", y: 1.15, x: 0.0, font: { color: "#a0aec0", size: 11 } },
             font: { color: "#fff" },
             xaxis: { title: "Time Window Index", gridcolor: "#232733", font: { color: "#718096" }, tickfont: { size: 10 } },
-            yaxis: { title: "Air Velocity (m/s)", gridcolor: "#232733", titlefont: { color: "#00FFCC" }, tickfont: { color: "#00FFCC" }, range: [-0.05, 1.1] },
-            yaxis2: { title: "Valve Stroke (%)", titlefont: { color: "#ff9f43" }, tickfont: { color: "#ff9f43" }, range: [-5, 105], overlaying: 'y', side: 'right', showgrid: false }
+            yaxis: { title: "Feedback Signal (Vdc)", gridcolor: "#232733", titlefont: { color: "#ff9f43" }, tickfont: { color: "#ff9f43" }, range: [-0.5, 10.5] },
+            yaxis2: { title: "Valve Stroke (%)", titlefont: { color: "#e2e8f0" }, tickfont: { color: "#e2e8f0" }, range: [-5, 105], overlaying: 'y', side: 'right', showgrid: false }
         };
 
         async function pullRealtimeArrayUpdates() {
@@ -126,93 +110,78 @@
                 }
                 document.getElementById('connection-warning').classList.add('hidden');
 
-                // Sort structural tree nodes sequentially by Firebase key identifier
                 const sequentialSortedKeys = Object.keys(databaseNodeCollection).sort();
                 const totalRecordsCollected = sequentialSortedKeys.map(key => databaseNodeCollection[key]);
                 const absoluteLatestNode = totalRecordsCollected[totalRecordsCollected.length - 1];
 
-                // Global Context Status Handler Badges
                 const commsBadge = document.getElementById('comms-badge');
                 commsBadge.innerText = "🟢 online";
                 commsBadge.className = "mt-2 md:mt-0 bg-emerald-950/50 border border-emerald-500 text-emerald-300 px-3 py-1 rounded text-xs uppercase tracking-wider font-semibold";
 
-                // --- 1. POPULATE AIR VELOCITY DATA METRICS ---
-                document.getElementById('velocity-val').innerText = absoluteLatestNode.air_velocity.toFixed(3) + " m/s";
-                document.getElementById('voltage-val').innerText = absoluteLatestNode.sensor_voltage.toFixed(2) + " Vdc Input";
-
-                // --- 2. POPULATE CLIMATE DATA METRICS (DHT11 SAFE PARSING) ---
-                const parsedTemp = absoluteLatestNode.temperature !== undefined ? absoluteLatestNode.temperature : 0.0;
-                const parsedHum = absoluteLatestNode.humidity !== undefined ? absoluteLatestNode.humidity : 0.0;
-                document.getElementById('temp-val').innerText = parsedTemp.toFixed(1) + " °C";
-                document.getElementById('hum-val').innerText = parsedHum.toFixed(1) + " %";
-
-                // --- 3. POPULATE ACTUATOR DATA METRICS (SIEMENS TERMINAL U PARSING) ---
+                // EXTRACT TARGET DATA FIELD ARRAYS
                 const parsedActuatorVolt = absoluteLatestNode.actuator_voltage !== undefined ? absoluteLatestNode.actuator_voltage : 0.0;
                 const parsedStrokePct = absoluteLatestNode.stroke_percentage !== undefined ? absoluteLatestNode.stroke_percentage : 0.0;
                 const parsedStrokeMm = absoluteLatestNode.stroke_mm !== undefined ? absoluteLatestNode.stroke_mm : 0.0;
 
+                // POPULATE ELEMENTS
                 document.getElementById('actuator-volt').innerText = parsedActuatorVolt.toFixed(2) + " Vdc";
                 document.getElementById('actuator-pct').innerText = parsedStrokePct.toFixed(1) + "%";
                 document.getElementById('actuator-mm').innerText = parsedStrokeMm.toFixed(2) + " mm";
                 document.getElementById('timestamp-val').innerText = absoluteLatestNode.timestamp;
 
-                // Adjust Physical Valve Linear Graphical Stem Container Height
                 document.getElementById('valve-shaft-fill').style.height = parsedStrokePct + "%";
 
-                // State Machine Conditional Logic Layout for Valve Operation Description Field
                 const stateText = document.getElementById('valve-state-text');
                 const badgeElement = document.getElementById('valve-badge');
                 
                 if (parsedStrokePct === 0) {
-                    stateText.innerText = "⛔ Fully Static Closed";
-                    stateText.className = "text-xs text-red-400";
+                    stateText.innerText = "⛔ Fully Closed";
+                    stateText.className = "text-xl font-bold mt-1.5 text-red-400";
                     badgeElement.innerText = "CLOSED";
                     badgeElement.className = "px-2.5 py-0.5 rounded text-[11px] font-bold uppercase bg-red-950 text-red-300 border border-red-800";
                 } else if (parsedStrokePct >= 99.0) {
-                    stateText.innerText = "⚡ Full System Open Capacity";
-                    stateText.className = "text-xs text-emerald-400";
-                    badgeElement.innerText = "FULL OPEN";
+                    stateText.innerText = "⚡ Fully Open";
+                    stateText.className = "text-xl font-bold mt-1.5 text-emerald-400";
+                    badgeElement.innerText = "OPEN";
                     badgeElement.className = "px-2.5 py-0.5 rounded text-[11px] font-bold uppercase bg-emerald-950 text-emerald-300 border border-emerald-800";
                 } else {
-                    stateText.innerText = "🔄 Dynamic Modulating Flow";
-                    stateText.className = "text-xs text-amber-400";
+                    stateText.innerText = "🔄 Modulating";
+                    stateText.className = "text-xl font-bold mt-1.5 text-amber-400";
                     badgeElement.innerText = "MODULATING";
                     badgeElement.className = "px-2.5 py-0.5 rounded text-[11px] font-bold uppercase bg-amber-950 text-amber-300 border border-amber-800";
                 }
 
-                // --- 4. GRAPH DATA PACK ENGINE SLICING (ROLLING TIME WINDOW - LAST 30 LOG NODES) ---
+                // PROCESS HISTORICAL WINDOW TIMELINE (LAST 30 NODES)
                 const rollingHistorySlice = totalRecordsCollected.slice(-30);
                 const timelineTimestamps = rollingHistorySlice.map(record => {
                     let dateObject = new Date(record.timestamp);
                     return dateObject.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 });
                 
-                const historyAirVelocityArray = rollingHistorySlice.map(record => record.air_velocity);
-                const historyValveStrokeArray = rollingHistorySlice.map(record => record.stroke_percentage !== undefined ? record.stroke_percentage : 0.0);
+                const historyVoltArray = rollingHistorySlice.map(record => record.actuator_voltage !== undefined ? record.actuator_voltage : 0.0);
+                const historyStrokeArray = rollingHistorySlice.map(record => record.stroke_percentage !== undefined ? record.stroke_percentage : 0.0);
 
-                // Build Multivariable Trace Array Structure Mapping Map
-                const airVelocityTrace = {
+                const voltageTrace = {
                     x: timelineTimestamps,
-                    y: historyAirVelocityArray,
-                    name: 'Air Velocity (m/s)',
+                    y: historyVoltArray,
+                    name: 'Signal Level (Vdc)',
                     type: 'scatter',
                     mode: 'lines+markers',
-                    marker: { color: '#00FFCC', size: 4 },
-                    line: { color: '#00FFCC', width: 2, shape: 'spline' }
+                    marker: { color: '#ff9f43', size: 4 },
+                    line: { color: '#ff9f43', width: 2, shape: 'spline' }
                 };
 
-                const valveStrokeTrace = {
+                const strokeTrace = {
                     x: timelineTimestamps,
-                    y: historyValveStrokeArray,
-                    name: 'Valve Stroke (%)',
-                    yaxis: 'y2', // Map explicitly to the secondary vertical axes coordinates index
+                    y: historyStrokeArray,
+                    name: 'Stroke Distance (%)',
+                    yaxis: 'y2',
                     type: 'scatter',
                     mode: 'lines',
-                    line: { color: '#ff9f43', width: 2, dash: 'dot' }
+                    line: { color: '#e2e8f0', width: 1.5, dash: 'dot' }
                 };
 
-                // Push compiled arrays straight into reactive layout engine canvas matrix
-                Plotly.react('scada-trend-chart', [airVelocityTrace, valveStrokeTrace], chartLayoutBlueprint);
+                Plotly.react('scada-trend-chart', [voltageTrace, strokeTrace], chartLayoutBlueprint);
 
             } catch (pipelineNetworkError) {
                 console.error("SCADA Core Engine Data Parse Failure: ", pipelineNetworkError);
@@ -221,9 +190,8 @@
             }
         }
 
-        // Establish structural real-time polling execution clock cycle at 1000ms frequency
         setInterval(pullRealtimeArrayUpdates, 1000);
-        pullRealtimeArrayUpdates(); // Instant priming fire loop call upon document ready state
+        pullRealtimeArrayUpdates();
     </script>
 </body>
 </html>
