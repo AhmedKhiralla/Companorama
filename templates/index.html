@@ -176,8 +176,10 @@
 
     <!-- DASHBOARD LOGIC ENGINE -->
     <script>
-        // TARGET NEW FIREBASE DB TABLE
         const DATABASE_STREAM_URL = 'https://companorama-5da32-default-rtdb.europe-west1.firebasedatabase.app/analog_logs_TRH.json?orderBy="$key"&limitToLast=30';
+
+        // Compensation Factor for A0 Channel (4.24V actual vs 2.96V recorded)
+        const A0_VOLTAGE_CORRECTION_FACTOR = 4.24 / 2.96;
 
         const chartLayoutBlueprint = {
             margin: { l: 45, r: 45, t: 10, b: 40 },
@@ -220,18 +222,19 @@
                 }
                 document.getElementById('connection-warning').classList.add('hidden');
 
-                // Sort incoming JSON key-value map
                 const sequentialSortedKeys = Object.keys(databaseNodeCollection).sort();
                 const totalRecordsCollected = sequentialSortedKeys.map(key => databaseNodeCollection[key]);
                 const absoluteLatestNode = totalRecordsCollected[totalRecordsCollected.length - 1];
 
-                // Update Communication Status Badge
+                // Update Status Badge
                 const commsBadge = document.getElementById('comms-badge');
                 commsBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span>Online</span>`;
                 commsBadge.className = "bg-emerald-950/60 border border-emerald-800/80 text-emerald-400 px-4 py-1.5 rounded-xl text-xs uppercase tracking-wider font-bold font-mono-code flex items-center gap-2 shadow-lg";
 
-                // Unpack variables with safety fallbacks
-                const qfmTemp = absoluteLatestNode.qfm_temperature !== undefined ? absoluteLatestNode.qfm_temperature : 0.0;
+                // Unpack variables & apply hardware compensation transparently
+                const rawQfmTemp = absoluteLatestNode.qfm_temperature !== undefined ? absoluteLatestNode.qfm_temperature : 0.0;
+                const qfmTemp = rawQfmTemp * A0_VOLTAGE_CORRECTION_FACTOR; // Corrected temperature reading
+                
                 const qfmHum  = absoluteLatestNode.qfm_humidity !== undefined ? absoluteLatestNode.qfm_humidity : 0.0;
                 const dhtTemp = absoluteLatestNode.dht_temperature !== undefined ? absoluteLatestNode.dht_temperature : 0.0;
                 const dhtHum  = absoluteLatestNode.dht_humidity !== undefined ? absoluteLatestNode.dht_humidity : 0.0;
@@ -244,18 +247,18 @@
                 
                 document.getElementById('timestamp-val').innerText = absoluteLatestNode.timestamp || "N/A";
 
-                // Map time arrays for Plotly
+                // Map timeline arrays with compensation applied to A0 history
                 const timelineTimestamps = totalRecordsCollected.map(record => {
                     let dateObject = new Date(record.timestamp);
                     return isNaN(dateObject) ? record.timestamp : dateObject.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 });
 
-                const historyQfmTemp = totalRecordsCollected.map(r => r.qfm_temperature ?? 0.0);
+                const historyQfmTemp = totalRecordsCollected.map(r => (r.qfm_temperature ?? 0.0) * A0_VOLTAGE_CORRECTION_FACTOR);
                 const historyQfmHum  = totalRecordsCollected.map(r => r.qfm_humidity ?? 0.0);
                 const historyDhtTemp = totalRecordsCollected.map(r => (r.dht_temperature !== undefined && r.dht_temperature > -50) ? r.dht_temperature : null);
                 const historyDhtHum  = totalRecordsCollected.map(r => (r.dht_humidity !== undefined && r.dht_humidity > -50) ? r.dht_humidity : null);
 
-                // Trace 1: QFM Temperature
+                // Trace 1: QFM Temperature (Calibrated)
                 const traceQfmTemp = {
                     x: timelineTimestamps,
                     y: historyQfmTemp,
@@ -307,7 +310,6 @@
             }
         }
 
-        // 5-second polling interval
         setInterval(pullRealtimeArrayUpdates, 5000);
         pullRealtimeArrayUpdates();
     </script>
