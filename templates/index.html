@@ -43,9 +43,18 @@
                         Companorama <span class="bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">Telemetry Matrix</span>
                     </h1>
                 </div>
-                <p class="text-xs sm:text-sm text-slate-400 mt-1.5 font-medium flex items-center gap-2">
-                    <span>Industrial Climate Telemetry</span> • <span class="text-slate-300">Siemens QFM3160 Duct Node vs. Ambient DHT11 Array</span>
-                </p>
+                
+                <!-- PROMINENT LAST SYNC DISPLAY AT THE TOP -->
+                <div class="mt-2.5 flex flex-wrap items-center gap-2">
+                    <div class="inline-flex items-center gap-2 bg-indigo-950/80 border border-indigo-500/30 text-indigo-200 px-3 py-1 rounded-lg text-xs font-mono-code shadow-md">
+                        <span class="text-indigo-400">🕒 LAST SYNC:</span>
+                        <span id="header-timestamp-val" class="font-bold text-white tracking-wide">Awaiting Signal...</span>
+                    </div>
+                    <span class="text-slate-500 text-xs hidden sm:inline">•</span>
+                    <p class="text-xs text-slate-400 font-medium">
+                        Siemens QFM3160 Duct Node vs. Ambient DHT11 Array
+                    </p>
+                </div>
             </div>
 
             <div class="flex items-center gap-3 z-10 self-end md:self-auto">
@@ -245,7 +254,10 @@
                 document.getElementById('dht-temp-val').innerText = (dhtTemp < -50) ? "Err" : dhtTemp.toFixed(1);
                 document.getElementById('dht-hum-val').innerText  = (dhtHum < -50) ? "Err" : dhtHum.toFixed(1);
                 
-                document.getElementById('timestamp-val').innerText = absoluteLatestNode.timestamp || "N/A";
+                // Update Timestamps (Footer & Top Header Badge)
+                const latestTimestamp = absoluteLatestNode.timestamp || "N/A";
+                document.getElementById('timestamp-val').innerText = latestTimestamp;
+                document.getElementById('header-timestamp-val').innerText = latestTimestamp;
 
                 // Map timeline arrays with compensation applied to A0 history
                 const timelineTimestamps = totalRecordsCollected.map(record => {
